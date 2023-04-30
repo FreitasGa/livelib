@@ -1,0 +1,33 @@
+version: '3.8'
+name: livelib
+
+networks:
+  livelib:
+    name: livelib
+    driver: bridge
+    
+services:
+  database:
+    container_name: livelib-database
+    image: mongo
+    ports:
+      - 27017:27017
+    networks:
+      - livelib
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=livelib
+      - MONGO_INITDB_ROOT_PASSWORD=livelib
+      - MONGO_INITDB_DATABASE=livelib
+      
+  backend:
+    container_name: livelib-backend
+    build: .
+    ports:
+      - 3000:3000
+    networks:
+      - livelib
+    depends_on:
+      - database
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL="mongodb://livelib:livelib@database:27017/livelib?retryWrites=true&w=majority"
