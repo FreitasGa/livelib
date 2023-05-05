@@ -8,7 +8,6 @@ export class ConversationController {
 
   @Post()
   handle(@Body() event: EventDto) {
-    console.log(event);
     this.conversationService.onMessageAdded(event);
   }
 }
