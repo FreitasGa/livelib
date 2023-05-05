@@ -6,63 +6,60 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
+model Client {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  phone     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  rents     Rent[]
+
+  @@map("client")
+}
+
 model Book {
-  id          String         @id @default(cuid())
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   title       String
   author      String
   description String
-  rents       Rent[]
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
-  genres      GenresOnBook[]
+  price       Int
+  stock       Int
+  genres      Genre[]  @relation(fields: [genreIds], references: [id])
+  genreIds    String[] @db.ObjectId
+  rents       Rent[]   @relation(fields: [rentIds], references: [id])
+  rentIds     String[] @db.ObjectId
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("book")
 }
 
 model Genre {
-  id        String         @id @default(cuid())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   name      String
-  createdAt DateTime       @default(now()) @map("created_at")
-  updatedAt DateTime       @updatedAt @map("updated_at")
-  books     GenresOnBook[]
+  books     Book[]   @relation(fields: [bookIds], references: [id])
+  bookIds   String[] @db.ObjectId
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("genre")
 }
 
-model GenresOnBook {
-  book    Book   @relation(fields: [bookId], references: [id])
-  genre   Genre  @relation(fields: [genreId], references: [id])
-  bookId  String
-  genreId String
-
-  @@id([bookId, genreId])
-  @@map("genres_on_book")
-}
-
-model Client {
-  id        String   @id @default(cuid())
-  name      String
-  phone     String
-  rents     Rent[]
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("client")
-}
-
 model Rent {
-  id        String   @id @default(cuid())
-  startDate DateTime
-  endDate   DateTime
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   price     Int
   client    Client   @relation(fields: [clientId], references: [id])
-  book      Book     @relation(fields: [bookId], references: [id])
-  clientId  String
-  bookId    String
+  clientId  String   @db.ObjectId
+  bookIds   String[] @db.ObjectId
+  books     Book[]   @relation(fields: [bookIds], references: [id])
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("rent")
 }
