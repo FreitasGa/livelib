@@ -10,13 +10,59 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Books {
-  id        String   @id @default(cuid()) 
-  title    String
-  author     String
+model Book {
+  id          String         @id @default(cuid())
+  title       String
+  author      String
   description String
+  rents       Rent[]
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  genres      GenresOnBook[]
+
+  @@map("book")
+}
+
+model Genre {
+  id        String         @id @default(cuid())
+  name      String
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+  books     GenresOnBook[]
+
+  @@map("genre")
+}
+
+model GenresOnBook {
+  book    Book   @relation(fields: [bookId], references: [id])
+  genre   Genre  @relation(fields: [genreId], references: [id])
+  bookId  String
+  genreId String
+
+  @@id([bookId, genreId])
+  @@map("genres_on_book")
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  rents     Rent[]
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("books")
+  @@map("client")
+}
+
+model Rent {
+  id        String   @id @default(cuid())
+  startDate DateTime
+  endDate   DateTime
+  price     Int
+  client    Client   @relation(fields: [clientId], references: [id])
+  book      Book     @relation(fields: [bookId], references: [id])
+  clientId  String
+  bookId    String
+
+  @@map("rent")
 }

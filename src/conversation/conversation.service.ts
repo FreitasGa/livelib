@@ -24,6 +24,8 @@ export class ConversationService {
   }
 
   async onMessageAdded(body: EventDto) {
+    const client = body;
+
     let message: string;
     if (body.Body === '1') {
       const books = await this.books.findAll();

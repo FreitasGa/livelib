@@ -8,7 +8,7 @@ export class BooksService {
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreateBookDto) {
-    const bookExists = await this.prisma.books.findFirst({
+    const bookExists = await this.prisma.book.findFirst({
       where: {
         title: data.title,
       },
@@ -18,7 +18,7 @@ export class BooksService {
       throw new Error('Book already exists');
     }
 
-    const book = await this.prisma.books.create({
+    const book = await this.prisma.book.create({
       data,
     });
 
@@ -26,11 +26,11 @@ export class BooksService {
   }
 
   async findAll() {
-    return await this.prisma.books.findMany();
+    return await this.prisma.book.findMany();
   }
 
   async findOne(id: string) {
-    const bookExists = await this.prisma.books.findUnique({
+    const bookExists = await this.prisma.book.findUnique({
       where: {
         id,
       },
@@ -40,7 +40,7 @@ export class BooksService {
       throw new Error('Book not found');
     }
 
-    return await this.prisma.books.findUnique({
+    return await this.prisma.book.findUnique({
       where: {
         id,
       },
@@ -48,7 +48,7 @@ export class BooksService {
   }
 
   async update(id: string, data: UpdateBookDto) {
-    const bookExists = await this.prisma.books.findUnique({
+    const bookExists = await this.prisma.book.findUnique({
       where: {
         id,
       },
@@ -58,7 +58,7 @@ export class BooksService {
       throw new Error('Book not found');
     }
 
-    const book = await this.prisma.books.update({
+    const book = await this.prisma.book.update({
       data,
       where: {
         id,
@@ -69,7 +69,7 @@ export class BooksService {
   }
 
   async remove(id: string) {
-    const bookExists = await this.prisma.books.findUnique({
+    const bookExists = await this.prisma.book.findUnique({
       where: {
         id,
       },
@@ -79,7 +79,7 @@ export class BooksService {
       throw new Error('Book not found');
     }
 
-    return await this.prisma.books.delete({
+    return await this.prisma.book.delete({
       where: {
         id,
       },
