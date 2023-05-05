@@ -1,1 +1,4 @@
-export class CreateGenreDto {}
+export class CreateGenreDto {
+  name: string;
+  booksIds: string[];
+}

@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Twilio } from 'twilio';
-import { EventDto } from './dto/event.dto';
+
 import { BooksService } from '../books/books.service';
+import { EventDto } from './dto/event.dto';
 
 @Injectable()
 export class ConversationService {
@@ -10,23 +11,17 @@ export class ConversationService {
 
   constructor(
     private configService: ConfigService,
-    private readonly books: BooksService,
+    private books: BooksService,
   ) {
     this.client = new Twilio(
       this.configService.get<string>('twilio.accountSid'),
       this.configService.get<string>('twilio.authToken'),
     );
-
-    this.client.conversations.v1.configuration
-      .webhooks()
-      .fetch()
-      .then((webhook) => console.log(webhook));
   }
 
   async onMessageAdded(body: EventDto) {
-    const client = body;
-
     let message: string;
+
     if (body.Body === '1') {
       const books = await this.books.findAll();
 

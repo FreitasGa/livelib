@@ -1,4 +1,10 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateRentDto } from './create-rent.dto';
 
-export class UpdateRentDto extends PartialType(CreateRentDto) {}
+export class UpdateRentDto extends PartialType(CreateRentDto) {
+  price: number;
+  clientId: string;
+  booksIds: string[];
+  startDate: Date;
+  endDate: Date;
+}

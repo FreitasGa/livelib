@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
+
+import { PrismaService } from 'src/database/prisma.service';
 import { GenresService } from './genres.service';
-import { GenresController } from './genres.controller';
 
 @Module({
-  controllers: [GenresController],
-  providers: [GenresService]
+  controllers: [],
+  providers: [GenresService, PrismaService],
 })
 export class GenresModule {}
