@@ -24,6 +24,12 @@ export class ClientsService {
     });
   }
 
+  async findOneByNumber(phone: string) {
+    return this.prisma.client.findMany({
+      where: { phone },
+    });
+  }
+
   async update(id: string, data: UpdateClientDto) {
     return this.prisma.client.update({
       data,

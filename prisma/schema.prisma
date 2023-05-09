@@ -13,7 +13,7 @@ datasource db {
 model Client {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   name      String
-  phone     String
+  phone     String   @unique
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   rents     Rent[]

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Twilio } from 'twilio';
 
 import { BooksService } from '../books/books.service';
+import { ClientsService } from '../clients/clients.service';
 import { EventDto } from './dto/event.dto';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class ConversationService {
   constructor(
     private configService: ConfigService,
     private books: BooksService,
+    private clients: ClientsService,
   ) {
     this.client = new Twilio(
       this.configService.get<string>('twilio.accountSid'),
@@ -20,6 +22,15 @@ export class ConversationService {
   }
 
   async onMessageAdded(body: EventDto) {
+    const client = await this.clients.findOneByNumber(body.WaId);
+
+    if (client.length > 0) {
+      await this.clients.create({
+        name: body.ProfileName,
+        phone: body.WaId,
+      });
+    }
+
     let message: string;
 
     if (body.Body === '1') {
@@ -28,7 +39,9 @@ export class ConversationService {
       message = `Eu recomendo três livros por semana para ampliar seus horizontes literários e desfrutar de novas histórias!\n\n Aqui estão três livros que eu recomendo para você ler esta semana:\n\n`;
 
       books.forEach((book, index) => {
-        message += `${index + 1}. ${book.description}\n\n`;
+        if (index < 3) {
+          message += `${index + 1}. ${book.description}\n\n`;
+        }
       });
     } else if (body.Body === '2') {
       message =
