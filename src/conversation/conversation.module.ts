@@ -5,9 +5,16 @@ import { BooksService } from '../books/books.service';
 import { ConversationController } from './conversation.controller';
 import { ConversationService } from './conversation.service';
 import { ClientsService } from 'src/clients/clients.service';
+import { TasksService } from './utils/schedule.service';
 
 @Module({
   controllers: [ConversationController],
-  providers: [ConversationService, BooksService, ClientsService, PrismaService],
+  providers: [
+    ConversationService,
+    BooksService,
+    ClientsService,
+    PrismaService,
+    TasksService,
+  ],
 })
 export class ConversationModule {}
