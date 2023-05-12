@@ -25,12 +25,12 @@ export class ConversationService {
 
   async onMessageAdded(body: EventDto) {
     await this.prisma.$connect();
-    const client = await this.clients.findOneByNumber(body.WaId);
+    const client = await this.clients.findOneByNumber(body.From);
 
-    if (client.length > 0) {
+    if (!client.length) {
       await this.clients.create({
         name: body.ProfileName,
-        phone: body.WaId,
+        phone: body.From,
       });
     }
 
@@ -43,7 +43,7 @@ export class ConversationService {
 
       books.forEach((book, index) => {
         if (index < 3) {
-          message += `${index + 1}. ${book.description}\n\n`;
+          message += `${index + 1}. ${book.title} - ${book.description}\n\n`;
         }
       });
     } else if (body.Body === '2') {
