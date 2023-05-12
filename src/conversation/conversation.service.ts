@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Twilio } from 'twilio';
 
+import { PrismaService } from 'src/database/prisma.service';
 import { BooksService } from '../books/books.service';
 import { ClientsService } from '../clients/clients.service';
 import { EventDto } from './dto/event.dto';
@@ -14,6 +15,7 @@ export class ConversationService {
     private configService: ConfigService,
     private books: BooksService,
     private clients: ClientsService,
+    private prisma: PrismaService,
   ) {
     this.client = new Twilio(
       this.configService.get<string>('twilio.accountSid'),
@@ -22,6 +24,7 @@ export class ConversationService {
   }
 
   async onMessageAdded(body: EventDto) {
+    await this.prisma.$connect();
     const client = await this.clients.findOneByNumber(body.WaId);
 
     if (client.length > 0) {
