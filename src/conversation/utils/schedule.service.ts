@@ -44,7 +44,7 @@ export class TasksService {
     clients.forEach(async (client) => {
       this.client.messages.create({
         to: client.phone,
-        from: this.configService.get<string>('twilioNumber'),
+        from: this.configService.get<string>('twilio.number'),
         body: message,
       });
     });
