@@ -5,7 +5,14 @@ import { Twilio } from 'twilio';
 import { PrismaService } from 'src/database/prisma.service';
 import { BooksService } from '../books/books.service';
 import { ClientsService } from '../clients/clients.service';
-import { EventDto } from './dto/event.dto';
+import { OnConversationAddedDto } from './dto/on-conversation-added.dto';
+import { OnConversationRemovedDto } from './dto/on-conversation-removed.dto';
+import { OnConversationUpdatedDto } from './dto/on-conversation-updated.dto';
+import { OnMessageAddedDto } from './dto/on-message-added.dto';
+import { OnParticipantAddedDto } from './dto/on-participant-added.dto';
+import { PostEventDto } from './dto/post-event.dto';
+import { EventType } from './event-type';
+import { MessageUtils } from './utils/messages';
 
 @Injectable()
 export class ConversationService {
@@ -23,42 +30,63 @@ export class ConversationService {
     );
   }
 
-  async onMessageAdded(body: EventDto) {
-    await this.prisma.$connect();
-    const client = await this.clients.findOneByNumber(body.From);
-
-    if (!client.length) {
-      await this.clients.create({
-        name: body.ProfileName,
-        phone: body.From,
-      });
+  onPostEvent(event: PostEventDto) {
+    switch (event.EventType) {
+      case EventType.OnConversationAdded:
+        return this.onConversationAdded(
+          event as unknown as OnConversationAddedDto,
+        );
+      case EventType.OnConversationRemoved:
+        return this.onConversationRemoved(
+          event as unknown as OnConversationRemovedDto,
+        );
+      case EventType.OnConversationUpdated:
+        return this.onConversationUpdated(
+          event as unknown as OnConversationUpdatedDto,
+        );
+      case EventType.OnMessageAdded:
+        return this.onMessageAdded(event as unknown as OnMessageAddedDto);
+      case EventType.OnParticipantAdded:
+        return this.onParticipantAdded(
+          event as unknown as OnParticipantAddedDto,
+        );
+      default:
+        throw new Error(`Unknown event type: ${event.EventType}`);
     }
+  }
 
-    let message: string;
+  private async onConversationAdded(event: OnConversationAddedDto) {
+    console.log('Conversation added', event);
 
-    if (body.Body === '1') {
-      const books = await this.books.findAll();
-
-      message = `Eu recomendo três livros por semana para ampliar seus horizontes literários e desfrutar de novas histórias!\n\n Aqui estão três livros que eu recomendo para você ler esta semana:\n\n`;
-
-      books.forEach((book, index) => {
-        if (index < 3) {
-          message += `${index + 1}. ${book.title} - ${book.description}\n\n`;
-        }
+    return this.client.conversations.v1
+      .conversations(event.ConversationSid)
+      .participants.create({
+        identity: 'chatbot',
       });
-    } else if (body.Body === '2') {
-      message =
-        'Olá! Para alugar um livro, por favor, informe o título e autor do livro que deseja alugar. Em seguida, verificaremos a disponibilidade e as informações necessárias para concluir a locação. Obrigado!';
-    } else if (body.Body === '3') {
-      message = `Olá! Para agendar sua visita à biblioteca, por favor, informe a data e o horário desejado. Em seguida, verificaremos a disponibilidade e confirmaremos sua reserva. Se precisar de ajuda para encontrar algum livro em particular, é só me informar que eu estarei aqui para ajudá-lo. Obrigado!`;
-    } else {
-      message = `Olá, por aqui posso te ajudar com uma dessas opções:\n\n1 - Sugestões de livros\n2 - Alugar livro\n3 - Agendar ida até a biblioteca\n4 - Exibir menu`;
-    }
+  }
 
-    this.client.messages.create({
-      to: body.From,
-      from: body.To,
-      body: message,
+  private async onConversationRemoved(event: OnConversationRemovedDto) {
+    console.log('Conversation removed', event);
+  }
+
+  private async onConversationUpdated(event: OnConversationUpdatedDto) {
+    console.log('Conversation updated', event);
+  }
+
+  private async onMessageAdded(event: OnMessageAddedDto) {
+    console.log('Message added', event);
+
+    const conversation = await this.client.conversations.v1
+      .conversations(event.ConversationSid)
+      .fetch();
+
+    return conversation.messages().create({
+      body: MessageUtils.menu(),
+      author: 'chatbot',
     });
+  }
+
+  private async onParticipantAdded(event: OnParticipantAddedDto) {
+    console.log('Participant added', event);
   }
 }

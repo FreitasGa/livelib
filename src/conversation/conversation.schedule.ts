@@ -3,12 +3,12 @@ import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { Twilio } from 'twilio';
 
-import { BooksService } from '../../books/books.service';
+import { BooksService } from '../books/books.service';
 import { ClientsService } from 'src/clients/clients.service';
 import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()
-export class TasksService {
+export class ConversationSchedule {
   private client: Twilio;
 
   constructor(
@@ -24,8 +24,9 @@ export class TasksService {
   }
 
   @Cron('0 8 * * 1')
-  async handleCron() {
+  async handle() {
     await this.prisma.$connect();
+
     const clients = await this.clients.findAll();
     const books = await this.books.findAll();
 

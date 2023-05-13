@@ -1,13 +1,13 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
-import { EventDto } from './dto/event.dto';
+import { PostEventDto } from './dto/post-event.dto';
 
 @Controller('conversation')
 export class ConversationController {
   constructor(private readonly conversationService: ConversationService) {}
 
-  @Post()
-  handle(@Body() event: EventDto) {
-    this.conversationService.onMessageAdded(event);
+  @Post('post-event')
+  handlePostEvent(@Body() event: PostEventDto) {
+    this.conversationService.onPostEvent(event);
   }
 }
