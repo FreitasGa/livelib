@@ -14,8 +14,10 @@ export class BooksService {
     });
   }
 
-  async findAll() {
-    return this.prisma.book.findMany();
+  async findAll(limit?: number) {
+    return this.prisma.book.findMany({
+      take: limit,
+    });
   }
 
   async findOne(id: string) {

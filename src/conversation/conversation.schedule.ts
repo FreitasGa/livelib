@@ -3,9 +3,10 @@ import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { Twilio } from 'twilio';
 
-import { BooksService } from '../../books/books.service';
+import { BooksService } from '../books/books.service';
 import { ClientsService } from 'src/clients/clients.service';
 import { PrismaService } from 'src/database/prisma.service';
+import { MessageUtils } from './utils/messages';
 
 @Injectable()
 export class TasksService {
@@ -27,24 +28,14 @@ export class TasksService {
   async handleCron() {
     await this.prisma.$connect();
     const clients = await this.clients.findAll();
-    const books = await this.books.findAll();
+    const books = await this.books.findAll(3);
 
-    let message: string;
-
-    message = `Olá, aqui estão três livros que eu recomendo para você ler esta semana:\n\n`;
-
-    books.forEach((book, index) => {
-      if (index < 3) {
-        message += `${index + 1}. ${book.title} - ${book.description}\n\n`;
-      }
-    });
-
-    message += 'Boa leitura!';
+    const message: string = MessageUtils.schedule(books);
 
     clients.forEach(async (client) => {
       this.client.messages.create({
         to: client.phone,
-        from: this.configService.get<string>('twilioNumber'),
+        from: this.configService.get<string>('twilio.number'),
         body: message,
       });
     });

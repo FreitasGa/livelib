@@ -25,7 +25,7 @@ export class ClientsService {
   }
 
   async findOneByNumber(phone: string) {
-    return this.prisma.client.findMany({
+    return this.prisma.client.findUnique({
       where: { phone },
     });
   }
