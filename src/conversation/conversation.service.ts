@@ -5,7 +5,7 @@ import { Twilio } from 'twilio';
 import { PrismaService } from 'src/database/prisma.service';
 import { BooksService } from '../books/books.service';
 import { ClientsService } from '../clients/clients.service';
-import { EventDto } from './dto/event.dto';
+import { MessageEventDto } from './dto/event.dto';
 import { MessageUtils } from './utils/messages';
 
 @Injectable()
@@ -24,28 +24,29 @@ export class ConversationService {
     );
   }
 
-  async onMessageAdded(body: EventDto) {
+  async onMessageEvent(event: MessageEventDto) {
     await this.prisma.$connect();
-    const client = await this.clients.findOneByNumber(body.From);
+
+    const client = await this.clients.findOneByNumber(event.From);
     const books = await this.books.findAll(3);
 
     await this.prisma.message.create({
       data: {
         clientId: client.id,
-        message: body.Body,
+        body: event.Body,
       },
     });
 
     if (!client) {
       await this.clients.create({
-        name: body.ProfileName,
-        phone: body.From,
+        name: event.ProfileName,
+        phone: event.From,
       });
     }
 
     let message: string;
 
-    switch (body.Body) {
+    switch (event.Body) {
       case '1':
         message = MessageUtils.suggestion(books);
         break;
@@ -61,8 +62,8 @@ export class ConversationService {
     }
 
     this.client.messages.create({
-      to: body.From,
-      from: body.To,
+      to: event.From,
+      from: event.To,
       body: message,
     });
   }

@@ -1,4 +1,4 @@
-export class EventDto {
+export class MessageEventDto {
   SmsMessageSid: string;
   NumMedia: string;
   ProfileName: string;
