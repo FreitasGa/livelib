@@ -11,12 +11,13 @@ datasource db {
 }
 
 model Client {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
   name      String
-  phone     String   @unique
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  phone     String    @unique
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
   rents     Rent[]
+  Message   Message[]
 
   @@map("client")
 }
@@ -62,4 +63,15 @@ model Rent {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("rent")
+}
+
+model Message {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  client    Client   @relation(fields: [clientId], references: [id])
+  clientId  String   @db.ObjectId
+  message   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("message")
 }
