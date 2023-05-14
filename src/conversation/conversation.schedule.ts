@@ -5,6 +5,7 @@ import { Twilio } from 'twilio';
 
 import { PrismaService } from 'src/database/prisma.service';
 import { MessageUtils } from './utils/messages';
+import { weekSkip } from './utils/skip';
 
 @Injectable()
 export class ConversationSchedule {
@@ -24,10 +25,25 @@ export class ConversationSchedule {
   async handleCron() {
     await this.prisma.$connect();
 
-    const clients = await this.prisma.client.findMany();
+    const genresCount = await this.prisma.genre.count();
+    const genresIds = await this.prisma.genre.findMany({
+      take: 3,
+      skip: weekSkip(genresCount),
+      select: {
+        id: true,
+      },
+    });
+
     const books = await this.prisma.book.findMany({
       take: 3,
+      where: {
+        genreIds: {
+          hasSome: genresIds.map((genre) => genre.id),
+        },
+      },
     });
+
+    const clients = await this.prisma.client.findMany();
 
     const from = this.configService.get<string>('twilio.number');
     const body = MessageUtils.schedule(books);
