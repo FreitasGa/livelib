@@ -5,7 +5,7 @@ import { BooksService } from '../books/books.service';
 import { ConversationController } from './conversation.controller';
 import { ConversationService } from './conversation.service';
 import { ClientsService } from 'src/clients/clients.service';
-import { TasksService } from './utils/schedule.service';
+import { TasksService } from './conversation.schedule';
 
 @Module({
   controllers: [ConversationController],

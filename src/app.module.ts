@@ -8,6 +8,7 @@ import { BooksModule } from './books/books.module';
 import { ClientsModule } from './clients/clients.module';
 import { GenresModule } from './genres/genres.module';
 import { RentsModule } from './rents/rents.module';
+import { MessagesModule } from './messages/messages.module';
 import configuration from './config/default';
 
 @Module({
@@ -19,6 +20,7 @@ import configuration from './config/default';
     ClientsModule,
     GenresModule,
     RentsModule,
+    MessagesModule,
   ],
   controllers: [],
   providers: [PrismaService],
