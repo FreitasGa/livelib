@@ -3,8 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { Twilio } from 'twilio';
 
 import { PrismaService } from 'src/database/prisma.service';
-import { BooksService } from '../books/books.service';
-import { ClientsService } from '../clients/clients.service';
 import { MessageEventDto } from './dto/event.dto';
 import { MessageUtils } from './utils/messages';
 
@@ -14,8 +12,6 @@ export class ConversationService {
 
   constructor(
     private configService: ConfigService,
-    private books: BooksService,
-    private clients: ClientsService,
     private prisma: PrismaService,
   ) {
     this.client = new Twilio(
@@ -27,8 +23,20 @@ export class ConversationService {
   async onMessageEvent(event: MessageEventDto) {
     await this.prisma.$connect();
 
-    const client = await this.clients.findOneByNumber(event.From);
-    const books = await this.books.findAll(3);
+    let client = await this.prisma.client.findUnique({
+      where: {
+        phone: event.From,
+      },
+    });
+
+    if (!client) {
+      client = await this.prisma.client.create({
+        data: {
+          name: event.ProfileName,
+          phone: event.From,
+        },
+      });
+    }
 
     await this.prisma.message.create({
       data: {
@@ -37,34 +45,31 @@ export class ConversationService {
       },
     });
 
-    if (!client) {
-      await this.clients.create({
-        name: event.ProfileName,
-        phone: event.From,
-      });
-    }
+    const books = await this.prisma.book.findMany({
+      take: 3,
+    });
 
-    let message: string;
+    let response: string;
 
     switch (event.Body) {
       case '1':
-        message = MessageUtils.suggestion(books);
+        response = MessageUtils.suggestion(books);
         break;
       case '2':
-        message = MessageUtils.search();
+        response = MessageUtils.search();
         break;
       case '3':
-        message = MessageUtils.rent();
+        response = MessageUtils.rent();
         break;
       default:
-        message = MessageUtils.menu();
+        response = MessageUtils.menu();
         break;
     }
 
     this.client.messages.create({
       to: event.From,
       from: event.To,
-      body: message,
+      body: response,
     });
   }
 }

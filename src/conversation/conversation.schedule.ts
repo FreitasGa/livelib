@@ -1,21 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
+import { Cron } from '@nestjs/schedule';
 import { Twilio } from 'twilio';
 
-import { BooksService } from '../books/books.service';
-import { ClientsService } from 'src/clients/clients.service';
 import { PrismaService } from 'src/database/prisma.service';
 import { MessageUtils } from './utils/messages';
 
 @Injectable()
-export class TasksService {
+export class ConversationSchedule {
   private client: Twilio;
 
   constructor(
     private configService: ConfigService,
-    private books: BooksService,
-    private clients: ClientsService,
     private prisma: PrismaService,
   ) {
     this.client = new Twilio(
@@ -27,16 +23,20 @@ export class TasksService {
   @Cron('0 8 * * 1')
   async handleCron() {
     await this.prisma.$connect();
-    const clients = await this.clients.findAll();
-    const books = await this.books.findAll(3);
 
-    const message: string = MessageUtils.schedule(books);
+    const clients = await this.prisma.client.findMany();
+    const books = await this.prisma.book.findMany({
+      take: 3,
+    });
+
+    const from = this.configService.get<string>('twilio.number');
+    const body = MessageUtils.schedule(books);
 
     clients.forEach(async (client) => {
-      this.client.messages.create({
+      await this.client.messages.create({
         to: client.phone,
-        from: this.configService.get<string>('twilio.number'),
-        body: message,
+        from,
+        body,
       });
     });
   }
