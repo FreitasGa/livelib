@@ -30,6 +30,14 @@ export class MessageUtils {
     ].join('\n');
   }
 
+  static rentMenu(): string {
+    return [
+      'Digite o nome do livro que deseja alugar.\n',
+      'Retornarei os 3 primeiros resultados da busca.\n',
+      'Caso queira retornar ao menu, digite 0.',
+    ].join('\n');
+  }
+
   static search(books: Book[]): string {
     const options = books.map((book, index) => `${index + 1} - ${book.title}`);
 
@@ -46,14 +54,6 @@ export class MessageUtils {
       '',
       'Caso queira alugar algum desses livros, digite o número correspondente ao livro que deseja alugar.\n',
       'Caso queira ver o menu, digite 0.',
-    ].join('\n');
-  }
-
-  static rentMenu(): string {
-    return [
-      'Digite o nome do livro que deseja alugar.\n',
-      'Retornarei os 3 primeiros resultados da busca.\n',
-      'Caso queira retornar ao menu, digite 0.',
     ].join('\n');
   }
 
