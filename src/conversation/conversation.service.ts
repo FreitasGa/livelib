@@ -140,13 +140,13 @@ export class ConversationService {
 
       switch (messages[0].body) {
         case '0':
-          await this.prisma.cart.update({
+          cart = await this.prisma.cart.update({
             where: {
               id: cart.id,
             },
             data: {
               bookIds: {
-                set: books?.bookIds.pop(),
+                set: books?.bookIds.slice(0, -1),
               },
             },
           });
@@ -165,7 +165,7 @@ export class ConversationService {
             },
             data: {
               bookIds: {
-                set: books?.bookIds.pop(),
+                set: books?.bookIds.slice(0, -1),
               },
             },
           });
@@ -422,7 +422,7 @@ export class ConversationService {
   private async cartClear(event: MessageEventDto, client: Client, cart: Cart) {
     await this.setState(client, 'Cart');
 
-    await this.prisma.cart.update({
+    cart = await this.prisma.cart.update({
       where: {
         id: cart.id,
       },
@@ -438,6 +438,8 @@ export class ConversationService {
       from: event.To,
       body: MessageUtils.cartClear(),
     });
+
+    return this.main(event, client, cart);
   }
 
   private async setState(client: Client, state: State) {

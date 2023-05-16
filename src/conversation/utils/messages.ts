@@ -121,10 +121,7 @@ export class MessageUtils {
   }
 
   static cartClear(): string {
-    return [
-      'Carrinho limpo com sucesso!\n',
-      'Caso queira ver o menu, digite 0.',
-    ].join('\n');
+    return ['Carrinho limpo com sucesso!\n'].join('\n');
   }
 
   static book(book: Book): string {
