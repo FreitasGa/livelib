@@ -10,16 +10,40 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum State {
+  Main
+  Suggestion
+  Prompt
+  Search
+  Rent
+  Confirmation
+  Cart
+}
+
 model Client {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
   name      String
   phone     String    @unique
+  state     State     @default(Main)
+  rents     Rent[]
+  messages  Message[]
+  cart      Cart?
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
-  rents     Rent[]
-  Message   Message[]
 
   @@map("client")
+}
+
+model Cart {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  clientId  String   @unique @map("client_id") @db.ObjectId
+  client    Client   @relation(fields: [clientId], references: [id])
+  bookIds   String[] @map("book_ids") @db.ObjectId
+  books     Book[]   @relation(fields: [bookIds], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("cart")
 }
 
 model Book {
@@ -29,10 +53,13 @@ model Book {
   description String
   price       Int
   stock       Int
+  cover       String
+  genreIds    String[] @map("genre_ids") @db.ObjectId
   genres      Genre[]  @relation(fields: [genreIds], references: [id])
-  genreIds    String[] @db.ObjectId
+  rentIds     String[] @map("rent_ids") @db.ObjectId
   rents       Rent[]   @relation(fields: [rentIds], references: [id])
-  rentIds     String[] @db.ObjectId
+  cartIds     String[] @map("cart_ids") @db.ObjectId
+  carts       Cart[]   @relation(fields: [cartIds], references: [id])
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -42,8 +69,8 @@ model Book {
 model Genre {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   name      String   @unique
+  bookIds   String[] @map("book_ids") @db.ObjectId
   books     Book[]   @relation(fields: [bookIds], references: [id])
-  bookIds   String[] @db.ObjectId
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -53,12 +80,12 @@ model Genre {
 model Rent {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   price     Int
+  clientId  String   @map("client_id") @db.ObjectId
   client    Client   @relation(fields: [clientId], references: [id])
-  clientId  String   @db.ObjectId
-  bookIds   String[] @db.ObjectId
+  bookIds   String[] @map("book_ids") @db.ObjectId
   books     Book[]   @relation(fields: [bookIds], references: [id])
-  startDate DateTime
-  endDate   DateTime
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -67,9 +94,9 @@ model Rent {
 
 model Message {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  clientId  String   @map("client_id") @db.ObjectId
   client    Client   @relation(fields: [clientId], references: [id])
-  clientId  String   @db.ObjectId
-  message   String
+  body      String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
