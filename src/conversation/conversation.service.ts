@@ -106,6 +106,12 @@ export class ConversationService {
     if (client.state === 'Search') {
       if (messages[0].body === '0') {
         return this.main(event, client, cart);
+      } else if (
+        messages[0].body === '1' ||
+        messages[0].body === '2' ||
+        messages[0].body === '3'
+      ) {
+        return this.searchConfirmation(event, client, cart, messages[1].body);
       }
 
       return this.search(event, client);
@@ -114,20 +120,67 @@ export class ConversationService {
     if (client.state === 'Rent') {
       if (messages[0].body === '0') {
         return this.main(event, client, cart);
+      } else if (
+        messages[0].body === '1' ||
+        messages[0].body === '2' ||
+        messages[0].body === '3'
+      ) {
+        return this.searchConfirmation(event, client, cart, messages[1].body);
       }
 
-      return this.searchConfirmation(event, client, cart, messages[1].body);
+      return this.search(event, client);
     }
 
     if (client.state === 'Confirmation') {
-      if (messages[0].body === '1') {
-        return this.rent(event, client, cart);
+      const books = await this.prisma.cart.findUnique({
+        where: {
+          id: cart.id,
+        },
+      });
+
+      switch (messages[0].body) {
+        case '0':
+          await this.prisma.cart.update({
+            where: {
+              id: cart.id,
+            },
+            data: {
+              bookIds: {
+                set: books?.bookIds.pop(),
+              },
+            },
+          });
+          return this.main(event, client, cart);
+        case '1':
+          await this.client.messages.create({
+            to: event.From,
+            from: event.To,
+            body: MessageUtils.addedToCart(),
+          });
+          break;
+        case '2':
+          await this.prisma.cart.update({
+            where: {
+              id: cart.id,
+            },
+            data: {
+              bookIds: {
+                set: books?.bookIds.pop(),
+              },
+            },
+          });
+          return this.suggestion(event, client);
       }
     }
 
     if (client.state === 'Cart') {
-      if (messages[0].body === '0') {
-        return this.main(event, client, cart);
+      switch (messages[0].body) {
+        case '0':
+          return this.main(event, client, cart);
+        case '1':
+          return this.rent(event, client, cart);
+        case '2':
+          return this.cartClear(event, client, cart);
       }
     }
 
@@ -177,7 +230,8 @@ export class ConversationService {
     client: Client,
     mode: 'search' | 'rent',
   ) {
-    await this.setState(client, 'Prompt');
+    const state = mode === 'search' ? 'Search' : 'Rent';
+    await this.setState(client, state);
 
     await this.client.messages.create({
       to: event.From,
@@ -316,7 +370,7 @@ export class ConversationService {
       },
     });
 
-    const rent = await this.prisma.rent.create({
+    await this.prisma.rent.create({
       data: {
         clientId: client.id,
         bookIds: {
@@ -362,6 +416,27 @@ export class ConversationService {
       to: event.From,
       from: event.To,
       body: MessageUtils.cart(books),
+    });
+  }
+
+  private async cartClear(event: MessageEventDto, client: Client, cart: Cart) {
+    await this.setState(client, 'Cart');
+
+    await this.prisma.cart.update({
+      where: {
+        id: cart.id,
+      },
+      data: {
+        bookIds: {
+          set: [],
+        },
+      },
+    });
+
+    await this.client.messages.create({
+      to: event.From,
+      from: event.To,
+      body: MessageUtils.cartClear(),
     });
   }
 

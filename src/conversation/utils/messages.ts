@@ -71,6 +71,10 @@ export class MessageUtils {
     ].join('\n');
   }
 
+  static addedToCart(): string {
+    return ['Livro adicionado ao carrinho com sucesso!\n'].join('\n');
+  }
+
   static rent(books: Book[]): string {
     if (books.length === 0) {
       return [
@@ -112,6 +116,13 @@ export class MessageUtils {
       '',
       'Caso queira alugar os livros, digite 1.',
       'Caso queira limpar o carrinho, digite 2.',
+      'Caso queira ver o menu, digite 0.',
+    ].join('\n');
+  }
+
+  static cartClear(): string {
+    return [
+      'Carrinho limpo com sucesso!\n',
       'Caso queira ver o menu, digite 0.',
     ].join('\n');
   }
