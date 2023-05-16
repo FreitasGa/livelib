@@ -12,7 +12,7 @@ async function main() {
   createReadStream(path)
     .pipe(parse({ fromLine: 2 }))
     .on('data', (row) => {
-      const [title, author, description, price, stock, genres] = row;
+      const [title, author, description, price, stock, genres, cover] = row;
 
       crudeBooks.push({
         title,
@@ -21,6 +21,7 @@ async function main() {
         price: Number(price),
         stock: Number(stock),
         genres: genres.split(', '),
+        cover,
       });
     });
 
@@ -64,6 +65,7 @@ async function main() {
       price: cb.price,
       stock: cb.stock,
       genreIds,
+      cover: cb.cover,
     };
   });
 
@@ -75,6 +77,7 @@ async function main() {
       price: book.price,
       stock: book.stock,
       genreIds: book.genreIds,
+      cover: book.cover,
     })),
   });
 }

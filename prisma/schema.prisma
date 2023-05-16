@@ -13,8 +13,11 @@ datasource db {
 enum State {
   Main
   Suggestion
+  Prompt
   Search
   Rent
+  Confirmation
+  Cart
 }
 
 model Client {
@@ -24,10 +27,23 @@ model Client {
   state     State     @default(Main)
   rents     Rent[]
   messages  Message[]
+  cart      Cart?
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
   @@map("client")
+}
+
+model Cart {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  clientId  String   @unique @map("client_id") @db.ObjectId
+  client    Client   @relation(fields: [clientId], references: [id])
+  bookIds   String[] @map("book_ids") @db.ObjectId
+  books     Book[]   @relation(fields: [bookIds], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("cart")
 }
 
 model Book {
@@ -37,10 +53,13 @@ model Book {
   description String
   price       Int
   stock       Int
+  cover       String
   genreIds    String[] @map("genre_ids") @db.ObjectId
   genres      Genre[]  @relation(fields: [genreIds], references: [id])
   rentIds     String[] @map("rent_ids") @db.ObjectId
   rents       Rent[]   @relation(fields: [rentIds], references: [id])
+  cartIds     String[] @map("cart_ids") @db.ObjectId
+  carts       Cart[]   @relation(fields: [cartIds], references: [id])
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

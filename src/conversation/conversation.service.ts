@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Cart, Client, State } from '@prisma/client';
 import { Twilio } from 'twilio';
 
+import { add } from 'date-fns';
 import { PrismaService } from 'src/database/prisma.service';
 import { MessageEventDto } from './dto/event.dto';
 import { MessageUtils } from './utils/messages';
 import { weekSkip } from './utils/skip';
+import { wait } from './utils/time';
 
 @Injectable()
 export class ConversationService {
@@ -22,7 +25,13 @@ export class ConversationService {
   }
 
   async onMessageEvent(event: MessageEventDto) {
-    console.log(event);
+    console.log('Message event received', {
+      profile: event.ProfileName,
+      from: event.From,
+      to: event.To,
+      body: event.Body,
+    });
+
     await this.prisma.$connect();
 
     let client = await this.prisma.client.findUnique({
@@ -40,6 +49,20 @@ export class ConversationService {
       });
     }
 
+    let cart = await this.prisma.cart.findUnique({
+      where: {
+        clientId: client.id,
+      },
+    });
+
+    if (!cart) {
+      cart = await this.prisma.cart.create({
+        data: {
+          clientId: client.id,
+        },
+      });
+    }
+
     await this.prisma.message.create({
       data: {
         clientId: client.id,
@@ -48,7 +71,7 @@ export class ConversationService {
     });
 
     const messages = await this.prisma.message.findMany({
-      take: 5,
+      take: 3,
       orderBy: {
         createdAt: 'desc',
       },
@@ -57,45 +80,73 @@ export class ConversationService {
       },
     });
 
-    switch (messages[2].body) {
-      case '2':
-        return this.handleSearchRent(messages[1].body, event);
-      case '3':
-        return this.handleSearchRent(messages[1].body, event);
+    if (client.state === 'Main') {
+      switch (messages[0].body) {
+        case '1':
+          return this.suggestion(event, client);
+        case '2':
+          return this.prompt(event, client, 'search');
+        case '3':
+          return this.prompt(event, client, 'rent');
+        case '4':
+          return this.cart(event, client, cart);
+      }
     }
 
-    switch (messages[1].body) {
-      case '1':
-        return this.handleSuggestionRent(event);
-      case '2':
-        return this.handleSearch(event);
-      case '3':
-        return this.handleSearch(event);
+    if (client.state === 'Suggestion') {
+      if (
+        messages[0].body === '1' ||
+        messages[0].body === '2' ||
+        messages[0].body === '3'
+      ) {
+        return this.suggestionConfirmation(event, client, cart);
+      }
     }
 
-    switch (messages[0].body) {
-      case '0':
-        return this.handleMenu(event);
-      case '1':
-        return this.handleSuggestion(event);
-      case '2':
-        return this.handleSearchMenu(event);
-      case '3':
-        return this.handleRentMenu(event);
+    if (client.state === 'Search') {
+      if (messages[0].body === '0') {
+        return this.main(event, client, cart);
+      }
+
+      return this.search(event, client);
     }
 
-    return this.handleMenu(event);
+    if (client.state === 'Rent') {
+      if (messages[0].body === '0') {
+        return this.main(event, client, cart);
+      }
+
+      return this.searchConfirmation(event, client, cart, messages[1].body);
+    }
+
+    if (client.state === 'Confirmation') {
+      if (messages[0].body === '1') {
+        return this.rent(event, client, cart);
+      }
+    }
+
+    if (client.state === 'Cart') {
+      if (messages[0].body === '0') {
+        return this.main(event, client, cart);
+      }
+    }
+
+    return this.main(event, client, cart);
   }
 
-  private async handleMenu(event: MessageEventDto) {
-    return this.client.messages.create({
+  private async main(event: MessageEventDto, client: Client, cart: Cart) {
+    await this.setState(client, 'Main');
+
+    await this.client.messages.create({
       to: event.From,
       from: event.To,
-      body: MessageUtils.menu(),
+      body: MessageUtils.main(cart.bookIds.length),
     });
   }
 
-  private async handleSuggestion(event: MessageEventDto) {
+  private async suggestion(event: MessageEventDto, client: Client) {
+    await this.setState(client, 'Suggestion');
+
     const genresCount = await this.prisma.genre.count();
     const genresIds = await this.prisma.genre.findMany({
       take: 3,
@@ -114,30 +165,30 @@ export class ConversationService {
       },
     });
 
-    return this.client.messages.create({
+    await this.client.messages.create({
       to: event.From,
       from: event.To,
       body: MessageUtils.suggestion(books),
     });
   }
 
-  private async handleSearchMenu(event: MessageEventDto) {
-    return this.client.messages.create({
+  private async prompt(
+    event: MessageEventDto,
+    client: Client,
+    mode: 'search' | 'rent',
+  ) {
+    await this.setState(client, 'Prompt');
+
+    await this.client.messages.create({
       to: event.From,
       from: event.To,
-      body: MessageUtils.searchMenu(),
+      body: MessageUtils.prompt(mode),
     });
   }
 
-  private async handleRentMenu(event: MessageEventDto) {
-    return this.client.messages.create({
-      to: event.From,
-      from: event.To,
-      body: MessageUtils.rentMenu(),
-    });
-  }
+  private async search(event: MessageEventDto, client: Client) {
+    await this.setState(client, 'Search');
 
-  private async handleSearch(event: MessageEventDto) {
     const books = await this.prisma.book.findMany({
       take: 3,
       where: {
@@ -148,19 +199,26 @@ export class ConversationService {
       },
     });
 
-    return this.client.messages.create({
+    await this.client.messages.create({
       to: event.From,
       from: event.To,
       body: MessageUtils.search(books),
     });
   }
 
-  private async handleSearchRent(message: string, event: MessageEventDto) {
+  private async searchConfirmation(
+    event: MessageEventDto,
+    client: Client,
+    cart: Cart,
+    oldMessage: string,
+  ) {
+    await this.setState(client, 'Confirmation');
+
     const books = await this.prisma.book.findMany({
       take: 3,
       where: {
         title: {
-          contains: message,
+          contains: oldMessage,
           mode: 'insensitive',
         },
       },
@@ -168,14 +226,39 @@ export class ConversationService {
 
     const index = parseInt(event.Body, 10) - 1;
 
-    return this.client.messages.create({
+    await this.client.messages.create({
       to: event.From,
       from: event.To,
-      body: MessageUtils.rent(books[index]),
+      body: MessageUtils.book(books[index]),
+      mediaUrl: [books[index].cover],
+    });
+
+    await wait(750);
+    await this.client.messages.create({
+      to: event.From,
+      from: event.To,
+      body: MessageUtils.confirmation(),
+    });
+
+    await this.prisma.cart.update({
+      where: {
+        id: cart.id,
+      },
+      data: {
+        bookIds: {
+          push: books[index].id,
+        },
+      },
     });
   }
 
-  private async handleSuggestionRent(event: MessageEventDto) {
+  private async suggestionConfirmation(
+    event: MessageEventDto,
+    client: Client,
+    cart: Cart,
+  ) {
+    await this.setState(client, 'Confirmation');
+
     const genresCount = await this.prisma.genre.count();
     const genresIds = await this.prisma.genre.findMany({
       take: 3,
@@ -196,10 +279,102 @@ export class ConversationService {
 
     const index = parseInt(event.Body, 10) - 1;
 
-    return this.client.messages.create({
+    await this.client.messages.create({
       to: event.From,
       from: event.To,
-      body: MessageUtils.rent(books[index]),
+      body: MessageUtils.book(books[index]),
+      mediaUrl: [books[index].cover],
     });
+
+    await wait(750);
+    await this.client.messages.create({
+      to: event.From,
+      from: event.To,
+      body: MessageUtils.confirmation(),
+    });
+
+    await this.prisma.cart.update({
+      where: {
+        id: cart.id,
+      },
+      data: {
+        bookIds: {
+          push: books[index].id,
+        },
+      },
+    });
+  }
+
+  private async rent(event: MessageEventDto, client: Client, cart: Cart) {
+    await this.setState(client, 'Rent');
+
+    const books = await this.prisma.book.findMany({
+      where: {
+        id: {
+          in: cart.bookIds,
+        },
+      },
+    });
+
+    const rent = await this.prisma.rent.create({
+      data: {
+        clientId: client.id,
+        bookIds: {
+          set: cart.bookIds,
+        },
+        startDate: new Date(),
+        endDate: add(new Date(), { weeks: 2 }),
+        price: 0,
+      },
+    });
+
+    await this.client.messages.create({
+      to: event.From,
+      from: event.To,
+      body: MessageUtils.rent(books),
+      mediaUrl: [books[0].cover],
+    });
+
+    await this.prisma.cart.update({
+      where: {
+        id: cart.id,
+      },
+      data: {
+        bookIds: {
+          set: [],
+        },
+      },
+    });
+  }
+
+  private async cart(event: MessageEventDto, client: Client, cart: Cart) {
+    await this.setState(client, 'Cart');
+
+    const books = await this.prisma.book.findMany({
+      where: {
+        id: {
+          in: cart.bookIds,
+        },
+      },
+    });
+
+    await this.client.messages.create({
+      to: event.From,
+      from: event.To,
+      body: MessageUtils.cart(books),
+    });
+  }
+
+  private async setState(client: Client, state: State) {
+    if (client.state !== state) {
+      await this.prisma.client.update({
+        where: {
+          id: client.id,
+        },
+        data: {
+          state,
+        },
+      });
+    }
   }
 }
