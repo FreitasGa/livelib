@@ -71,11 +71,19 @@ export class MessageUtils {
     ].join('\n');
   }
 
+  static confirmationDenied(): string {
+    return ['Você já possui esse livro alugado.\n'].join('\n');
+  }
+
   static addedToCart(): string {
     return ['Livro adicionado ao carrinho com sucesso!\n'].join('\n');
   }
 
-  static rent(books: Book[]): string {
+  static hasAdded(): string {
+    return ['Você já adicionou esse livro ao carrinho.\n'].join('\n');
+  }
+
+  static rent(books: Book[], hash: string): string {
     if (books.length === 0) {
       return [
         'Não encontrei nenhum livro com esse nome.\n',
@@ -89,6 +97,7 @@ export class MessageUtils {
       'Livros alugados com sucesso!\n',
       ...options,
       '',
+      'Sua chave de resgate de livros é: ' + hash + '\n',
       'Caso queira ver o menu, digite 0.',
     ].join('\n');
   }
