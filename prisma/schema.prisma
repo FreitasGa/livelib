@@ -17,6 +17,7 @@ enum State {
   Search
   Rent
   Confirmation
+  ConfirmationDenied
   Cart
 }
 
@@ -28,6 +29,7 @@ model Client {
   rents     Rent[]
   messages  Message[]
   cart      Cart?
+  counter   Int       @default(0)
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 

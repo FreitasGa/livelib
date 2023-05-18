@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cart, Client, State } from '@prisma/client';
 import { Twilio } from 'twilio';
+import { hotp } from 'otplib';
 
 import { add } from 'date-fns';
 import { PrismaService } from 'src/database/prisma.service';
@@ -138,6 +139,25 @@ export class ConversationService {
         },
       });
 
+      const hasRent = await this.prisma.rent.findFirst({
+        where: {
+          clientId: client.id,
+          bookIds: {
+            hasSome: books?.bookIds.slice(-1)[0],
+          },
+        },
+      });
+
+      const valueTotal = await this.prisma.cart.findUnique({
+        where: {
+          id: cart.id,
+        },
+      });
+
+      const value = valueTotal?.bookIds.pop();
+
+      const hasAdded = valueTotal?.bookIds.includes(value || '');
+
       switch (messages[0].body) {
         case '0':
           cart = await this.prisma.cart.update({
@@ -152,11 +172,36 @@ export class ConversationService {
           });
           return this.main(event, client, cart);
         case '1':
-          await this.client.messages.create({
-            to: event.From,
-            from: event.To,
-            body: MessageUtils.addedToCart(),
-          });
+          if (hasRent) {
+            cart = await this.prisma.cart.update({
+              where: {
+                id: cart.id,
+              },
+              data: {
+                bookIds: {
+                  set: books?.bookIds.slice(0, -1),
+                },
+              },
+            });
+
+            await this.client.messages.create({
+              to: event.From,
+              from: event.To,
+              body: MessageUtils.confirmationDenied(),
+            });
+          } else if (hasAdded) {
+            await this.client.messages.create({
+              to: event.From,
+              from: event.To,
+              body: MessageUtils.hasAdded(),
+            });
+          } else {
+            await this.client.messages.create({
+              to: event.From,
+              from: event.To,
+              body: MessageUtils.addedToCart(),
+            });
+          }
           break;
         case '2':
           await this.prisma.cart.update({
@@ -370,7 +415,7 @@ export class ConversationService {
       },
     });
 
-    await this.prisma.rent.create({
+    const rent = await this.prisma.rent.create({
       data: {
         clientId: client.id,
         bookIds: {
@@ -382,11 +427,23 @@ export class ConversationService {
       },
     });
 
+    await this.prisma.client.update({
+      where: {
+        id: client.id,
+      },
+      data: {
+        counter: client.counter + 1,
+      },
+    });
+
+    const hash = hotp.generate(rent.id, client.counter);
+
+    console.log('HOTP:', hash);
+
     await this.client.messages.create({
       to: event.From,
       from: event.To,
-      body: MessageUtils.rent(books),
-      mediaUrl: [books[0].cover],
+      body: MessageUtils.rent(books, hash),
     });
 
     await this.prisma.cart.update({
